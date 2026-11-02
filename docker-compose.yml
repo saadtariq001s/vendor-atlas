@@ -1,0 +1,104 @@
+# Vendor Atlas on one always-on PC.
+#
+#   cp .env.docker.example .env      # then fill it in
+#   docker compose up -d --build     # app on http://localhost:3000
+#
+# Reaching it from outside the office (phone, hotel wifi, a conference) is
+# done by a tunnel, which needs no router changes and no open ports:
+#
+#   docker compose --profile tunnel up -d     # named Cloudflare tunnel, fixed address
+#   docker compose --profile quick up -d      # free random address, email code first
+#
+# See README.md ▸ "Run it on an office PC".
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: atlas
+      POSTGRES_USER: atlas
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atlas -d atlas"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_APP_NAME: ${APP_NAME:-Vendor Atlas}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://atlas:${POSTGRES_PASSWORD}@db:5432/atlas
+      DATABASE_SSL: disable
+      # Creates the first administrator on an empty database, then ignored.
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-}
+    # Bound to this computer only: nothing else on the network or the internet
+    # can open it. Reaching it from outside goes through a tunnel profile
+    # below, which talks to the app inside Docker and needs no open port.
+    ports:
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
+
+  # A copy of the whole database every day, in the backups folder next to
+  # this file; the last 30 days are kept. To restore one, see README.md.
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./backups:/backups
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          f=/backups/vendor-atlas-$$(date +%Y-%m-%d).sql.gz
+          if pg_dump -h db -U atlas -d atlas --no-owner --clean --if-exists | gzip > "$$f.part"; then
+            mv "$$f.part" "$$f" && echo "backup saved: $$f"
+          else
+            rm -f "$$f.part"; echo "backup FAILED"
+          fi
+          find /backups -name 'vendor-atlas-*.sql.gz' -mtime +30 -delete
+          sleep 86400
+        done
+
+  # A fixed public address (https://vendors.your-domain.com) through a free
+  # Cloudflare account. Create the tunnel once in the Cloudflare dashboard,
+  # point its public hostname at http://app:3000, and paste its token into
+  # .env as TUNNEL_TOKEN.
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    depends_on:
+      - app
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN:-}
+
+  # Free, no account: a random https://….trycloudflare.com address. Only the
+  # emails in ALLOWED_EMAILS get through: Cloudflare sends them a one-time
+  # code before the sign-in page appears. (Left empty, it refuses to start
+  # rather than open the app to everyone.) The address changes when this
+  # container restarts; "Show web address.bat" prints the current one.
+  quick:
+    image: cloudflare/cloudflared:latest
+    profiles: ["quick"]
+    restart: unless-stopped
+    depends_on:
+      - app
+    command: tunnel --no-autoupdate --url http://app:3000 --allowed-mail ${ALLOWED_EMAILS:-}
+
+volumes:
+  pgdata:

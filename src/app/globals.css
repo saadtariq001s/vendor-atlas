@@ -1,0 +1,353 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────
+   Vendor Atlas
+   Linen paper, navy ink and one cobalt accent. Alegreya carries
+   the headlines (the search term itself is set as one, in italic);
+   Plus Jakarta Sans carries everything that is read at length.
+   Light only: the product is shown on projectors and phones in
+   bright rooms.
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  --bg: #f7f3ea;
+  --panel: #fffdf8;
+  --panel-2: #f1ece1;
+  --line: rgb(20 26 58 / 0.12);
+  --line-strong: rgb(20 26 58 / 0.24);
+  --ink: #141a3a;
+  --ink-2: #4b5068;
+  --ink-3: #7b7f93;
+
+  --accent: #2a44c9;
+  --accent-hover: #1f36ad;
+  --accent-ink: #ffffff;
+  --accent-soft: #e6e9f9;
+  --accent-text: #2239b3;
+
+  /* The warm wash behind the top of each page. */
+  --wash: #fbe3d6;
+  --wash-2: #efe5f2;
+
+  /* Chart marks — validated (dataviz validate_palette) against --panel.
+     s1..s4 are the vendors on a Compare page, in the order they were added. */
+  --mark: #2a44c9;
+  --track: #e9e4d8;
+  --s1: #2a44c9;
+  --s2: #c2731a;
+  --s3: #8a2f6b;
+  --s4: #1f8a6a;
+
+  --hl: #fbe7a6; /* matched search words */
+  --note: #fcf5dd; /* the notes card on a vendor */
+  --danger: #b42318;
+  --danger-soft: #fbe9e6;
+  --ok: #1f7a52;
+  --ok-soft: #e3f3ea;
+
+  --shadow-pop: 0 18px 50px -12px rgb(20 26 58 / 0.25), 0 2px 8px rgb(20 26 58 / 0.08);
+  --shadow-card: 0 1px 2px rgb(20 26 58 / 0.05), 0 12px 32px -16px rgb(20 26 58 / 0.18);
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-text: var(--accent-text);
+  --color-mark: var(--mark);
+  --color-track: var(--track);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-note: var(--note);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+
+  --font-sans: var(--font-jakarta), var(--font-plex-arabic), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-alegreya), var(--font-plex-arabic), Georgia, serif;
+}
+
+/* Base and component styles live in Tailwind's layers, so utility classes
+   (border-*, outline-none, ...) can override them. Unlayered CSS would win
+   over every utility regardless of specificity. */
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+
+  html {
+    background: var(--bg);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+}
+
+@layer components {
+  /* ── type ─────────────────────────────────────────────────── */
+
+  /* Headlines, and the search term set as one. */
+  .headline {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    line-height: 1.02;
+    text-wrap: balance;
+  }
+
+  .headline em,
+  .accent-word {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent-text);
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    line-height: 1.15;
+  }
+
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Matched search words: a low marker stroke, not a full block of colour,
+     so a page of results stays calm to read. */
+  mark {
+    background: linear-gradient(transparent 58%, var(--hl) 58%);
+    color: inherit;
+    padding: 0 1px;
+  }
+
+  /* The soft wash behind a page's opening. Two tints, off-centre, fading
+     into the paper well before the content starts. */
+  .wash {
+    background:
+      radial-gradient(60% 55% at 85% 0%, var(--wash) 0%, transparent 70%),
+      radial-gradient(45% 50% at 10% 10%, var(--wash-2) 0%, transparent 70%);
+  }
+
+  /* The home hero: a full first screen with a fuller wash than other pages,
+     so it reads as its own space above the content. */
+  .hero-stage {
+    background:
+      radial-gradient(70% 60% at 88% 8%, var(--wash) 0%, transparent 72%),
+      radial-gradient(55% 60% at 4% 92%, var(--wash-2) 0%, transparent 70%),
+      linear-gradient(180deg, var(--panel) 0%, var(--bg) 100%);
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* ── bars (BarList) ───────────────────────────────────────── */
+
+  .bar-track {
+    height: 6px;
+    background: var(--track);
+    border-radius: 0 4px 4px 0;
+  }
+
+  .bar-fill {
+    height: 6px;
+    background: var(--mark);
+    border-radius: 0 4px 4px 0; /* square at the baseline, rounded data-end */
+    transform-origin: left;
+    animation: bar-grow 700ms cubic-bezier(0.2, 0.7, 0.1, 1) both;
+    animation-delay: calc(var(--i, 0) * 45ms + 120ms);
+  }
+
+  @keyframes bar-grow {
+    from {
+      transform: scaleX(0);
+    }
+  }
+
+  .tip {
+    position: relative;
+  }
+
+  .tip > [role="tooltip"] {
+    position: absolute;
+    z-index: 20;
+    right: 0;
+    bottom: calc(100% + 6px);
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: var(--ink);
+    color: var(--panel);
+    font-size: 12px;
+    line-height: 1.35;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(2px);
+    transition:
+      opacity 120ms,
+      transform 120ms;
+  }
+
+  /* Hover only where hovering exists: a tap on a phone would leave it stuck
+     open over the next row. Every value is printed beside its bar anyway. */
+  @media (hover: hover) {
+    .tip:hover > [role="tooltip"] {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .tip:focus-visible > [role="tooltip"] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── hide contacts (presenting) ───────────────────────────── */
+
+[data-private="on"] .pii {
+  filter: blur(6px);
+  user-select: none;
+  pointer-events: none;
+}
+
+[data-private="on"] .pii-hide {
+  display: none !important;
+}
+
+/* ── overlays ─────────────────────────────────────────────── */
+
+.scrim {
+  animation: fade-in 160ms ease-out both;
+}
+
+.sheet {
+  animation: sheet-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@media (max-width: 767px) {
+  .sheet {
+    animation-name: sheet-up;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateX(32px);
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(48px);
+    opacity: 0;
+  }
+}
+
+.pop {
+  animation: pop-in 140ms ease-out both;
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.99);
+  }
+}
+
+/* A block that folds shut (height and opacity) — the home headline as the
+   search moves up to make room for results. */
+.fold {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows 450ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    opacity 300ms ease 100ms;
+}
+.fold > * {
+  min-height: 0;
+  overflow: hidden;
+}
+.fold-shut {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    grid-template-rows 450ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    opacity 150ms ease,
+    visibility 0s linear 450ms;
+}
+
+/* Hold the previous result at reduced opacity while the next one loads. */
+[data-pending="true"] {
+  opacity: 0.55;
+  transition: opacity 150ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+/* Thin, quiet scrollbars inside panels. */
+.scroll-quiet {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

@@ -1,0 +1,24 @@
+# Render Blueprint — Vendor Atlas (Next.js)
+# Deploy: push this repo to GitHub, then in Render: New ▸ Blueprint ▸ pick the repo.
+# DATABASE_URL is marked sync:false — paste it in the Render dashboard.
+#
+# Plan: "starter", not "free". A free service sleeps after 15 idle minutes and
+# takes ~50 s to wake — not something to discover mid-demo at a conference.
+services:
+  - type: web
+    name: vendor-atlas
+    runtime: node
+    plan: starter
+    region: singapore # put the database in the same region
+    branch: main
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start # migrations run at start-up (src/instrumentation.ts)
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22.13.0"
+      - key: NEXT_PUBLIC_APP_NAME
+        value: Vendor Atlas
+      - key: DATABASE_URL
+        sync: false

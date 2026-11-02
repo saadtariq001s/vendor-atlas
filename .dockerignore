@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+!.env.docker.example
+*.xlsx
+*.xls
+*.csv
+*.tsbuildinfo
+README.md
+render.yaml
+client-handoff
+new_files
+*.url
+*.bat
