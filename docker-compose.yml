@@ -133,14 +133,18 @@ services:
           host=$$(curl -fsS -m 10 "$$QUICK_STATUS" 2>/dev/null | sed -n 's/.*"hostname": *"\([^"]*\)".*/\1/p')
           if [ -n "$$host" ] && [ "$$host" != "$$last" ]; then
             url="https://$$host"
-            sha=$$(curl -fsS -m 20 -H "$$auth" "$$api" | sed -n 's/.*"sha": *"\([0-9a-f]*\)".*/\1/p' | head -n 1)
+            sha=$$(curl -sS -m 20 -H "$$auth" -H "User-Agent: vendor-atlas-link" "$$api" | sed -n 's/.*"sha": *"\([0-9a-f]*\)".*/\1/p' | head -n 1)
             body=$$(printf '{"url":"%s","updated":"%s"}\n' "$$url" "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" | base64 | tr -d '\n')
-            if curl -fsS -m 20 -X PUT -H "$$auth" -H "Accept: application/vnd.github+json" "$$api" \
-                 -d "{\"message\":\"Vendor Atlas is at $$url\",\"content\":\"$$body\",\"sha\":\"$$sha\"}" >/dev/null; then
+            res=$$(curl -sS -m 20 -w '\n%{http_code}' -X PUT -H "$$auth" -H "Accept: application/vnd.github+json" \
+                 -H "User-Agent: vendor-atlas-link" "$$api" \
+                 -d "{\"message\":\"Vendor Atlas is at $$url\",\"content\":\"$$body\",\"sha\":\"$$sha\"}")
+            code=$$(printf '%s' "$$res" | tail -n 1)
+            if [ "$$code" = "200" ] || [ "$$code" = "201" ]; then
               echo "link: published $$url"
               last="$$host"
             else
-              echo "link: could not publish (check LINK_TOKEN); trying again in a minute"
+              why=$$(printf '%s' "$$res" | sed -n 's/.*"message": *"\([^"]*\)".*/\1/p' | head -n 1)
+              echo "link: GitHub refused (HTTP $$code: $$why); token starts $$(printf '%s' "$$LINK_TOKEN" | cut -c1-15)…; trying again in a minute"
             fi
           fi
           sleep 60
