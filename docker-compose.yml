@@ -87,10 +87,10 @@ services:
       - app
     command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN:-}
 
-  # Free, no account: a random https://….trycloudflare.com address. Only the
-  # emails in ALLOWED_EMAILS get through: Cloudflare sends them a one-time
-  # code before the sign-in page appears. (Left empty, it refuses to start
-  # rather than open the app to everyone.) The address changes when this
+  # Free, no account: a random https://….trycloudflare.com address that leads
+  # to the app's own sign-in page. With ALLOWED_EMAILS set, Cloudflare also
+  # asks those emails for a one-time code first (a new Cloudflare feature;
+  # leave it empty if its sign-in misbehaves). The address changes when this
   # container restarts; "Show web address.bat" prints the current one.
   quick:
     image: cloudflare/cloudflared:latest
@@ -98,7 +98,7 @@ services:
     restart: unless-stopped
     depends_on:
       - app
-    command: tunnel --no-autoupdate --url http://app:3000 --allowed-mail ${ALLOWED_EMAILS:-}
+    command: tunnel --no-autoupdate --url http://app:3000 ${ALLOWED_EMAILS:+--allowed-mail $ALLOWED_EMAILS}
 
 volumes:
   pgdata:

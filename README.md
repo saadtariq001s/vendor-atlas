@@ -69,8 +69,10 @@ Two set-ups, same install:
    - **A free random address, no account or domain.** Put the emails
      allowed in at all in `.env` as `ALLOWED_EMAILS` (comma-separated), then
      run `docker compose --profile quick up -d`. Visitors get a one-time code
-     by email from Cloudflare before the sign-in page appears; with
-     `ALLOWED_EMAILS` empty the tunnel refuses to start. Double-click
+     by email from Cloudflare before the sign-in page appears. That
+     email lock is a new Cloudflare feature; if its code step sends people
+     to a Cloudflare staff login instead of the app, empty `ALLOWED_EMAILS`
+     and the address leads straight to the app's own sign-in. Double-click
      `Show web address.bat` (or run
      `docker compose --profile quick logs quick`) for the address. It
      changes whenever the PC or Docker restarts, and Cloudflare offers these
