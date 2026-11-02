@@ -78,6 +78,15 @@ Two set-ups, same install:
      changes whenever the PC or Docker restarts, and Cloudflare offers these
      tunnels without an uptime promise, so after a restart send him the new
      one. A fixed address needs the option above.
+   - **A permanent link for the free address.** The `link` service (same
+     profile) keeps a GitHub Pages page pointing at the current address, so
+     `https://<owner>.github.io/<repo>/` always forwards to the app. Make a
+     public repository with GitHub Pages on (an `index.html` that reads
+     `current.json` and forwards, like `saadtariq001s/vendor-atlas-link`), a
+     fine-grained token with Contents read and write on that repository only,
+     and put both in `.env` as `LINK_REPO` and `LINK_TOKEN`. It checks once a
+     minute; `docker compose --profile quick logs link` shows what it
+     published.
 
 Day to day: Docker Desktop starts the containers again after a reboot
 (`restart: unless-stopped`), `docker compose logs -f app` shows what the app

@@ -98,7 +98,53 @@ services:
     restart: unless-stopped
     depends_on:
       - app
-    command: tunnel --no-autoupdate --url http://app:3000 ${ALLOWED_EMAILS:+--allowed-mail $ALLOWED_EMAILS}
+    # The metrics port also answers /quicktunnel with the current address,
+    # which the link service below reads.
+    command: tunnel --no-autoupdate --metrics 0.0.0.0:20241 --url http://app:3000 ${ALLOWED_EMAILS:+--allowed-mail $ALLOWED_EMAILS}
+
+  # A permanent link for the changing quick-tunnel address: a GitHub Pages
+  # page (LINK_REPO) whose current.json this service rewrites whenever the
+  # address changes, so https://<owner>.github.io/<repo>/ always forwards to
+  # the app. LINK_TOKEN: a fine-grained GitHub token with Contents read and
+  # write on that one repository only. Without both, it does nothing.
+  link:
+    image: alpine:3.20
+    profiles: ["quick"]
+    restart: unless-stopped
+    depends_on:
+      - quick
+    environment:
+      LINK_REPO: ${LINK_REPO:-}
+      LINK_TOKEN: ${LINK_TOKEN:-}
+      QUICK_STATUS: http://quick:20241/quicktunnel
+      GITHUB_API: https://api.github.com
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if [ -z "$$LINK_REPO" ] || [ -z "$$LINK_TOKEN" ]; then
+          echo "link: LINK_REPO or LINK_TOKEN not set in .env, so no permanent link is published"
+          exec sleep 2147483647
+        fi
+        until command -v curl >/dev/null || apk add --no-cache -q curl >/dev/null 2>&1; do echo "link: waiting for internet"; sleep 30; done
+        api="$$GITHUB_API/repos/$$LINK_REPO/contents/current.json"
+        auth="Authorization: Bearer $$LINK_TOKEN"
+        last=""
+        while true; do
+          host=$$(curl -fsS -m 10 "$$QUICK_STATUS" 2>/dev/null | sed -n 's/.*"hostname": *"\([^"]*\)".*/\1/p')
+          if [ -n "$$host" ] && [ "$$host" != "$$last" ]; then
+            url="https://$$host"
+            sha=$$(curl -fsS -m 20 -H "$$auth" "$$api" | sed -n 's/.*"sha": *"\([0-9a-f]*\)".*/\1/p' | head -n 1)
+            body=$$(printf '{"url":"%s","updated":"%s"}\n' "$$url" "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" | base64 | tr -d '\n')
+            if curl -fsS -m 20 -X PUT -H "$$auth" -H "Accept: application/vnd.github+json" "$$api" \
+                 -d "{\"message\":\"Vendor Atlas is at $$url\",\"content\":\"$$body\",\"sha\":\"$$sha\"}" >/dev/null; then
+              echo "link: published $$url"
+              last="$$host"
+            else
+              echo "link: could not publish (check LINK_TOKEN); trying again in a minute"
+            fi
+          fi
+          sleep 60
+        done
 
 volumes:
   pgdata:
