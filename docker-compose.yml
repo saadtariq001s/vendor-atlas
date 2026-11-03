@@ -107,17 +107,25 @@ services:
   # address changes, so https://<owner>.github.io/<repo>/ always forwards to
   # the app. LINK_TOKEN: a fine-grained GitHub token with Contents read and
   # write on that one repository only. Without both, it does nothing.
+  #
+  # It also watches the address: Cloudflare drops a quick tunnel after the
+  # PC sleeps or loses its connection, while the tunnel container keeps
+  # running. After 4 failed checks in a row (about 4 minutes) it restarts
+  # the tunnel through the Docker socket, and the new address is published.
   link:
     image: alpine:3.20
     profiles: ["quick"]
     restart: unless-stopped
     depends_on:
       - quick
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       LINK_REPO: ${LINK_REPO:-}
       LINK_TOKEN: ${LINK_TOKEN:-}
       QUICK_STATUS: http://quick:20241/quicktunnel
       GITHUB_API: https://api.github.com
+      DOCKER_SOCK: /var/run/docker.sock
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -129,6 +137,17 @@ services:
         api="$$GITHUB_API/repos/$$LINK_REPO/contents/current.json"
         auth="Authorization: Bearer $$LINK_TOKEN"
         last=""
+        fails=0
+        restart_tunnel() {
+          id=$$(curl -sS --unix-socket "$$DOCKER_SOCK" -G "http://docker/containers/json" \
+                --data-urlencode 'filters={"label":["com.docker.compose.service=quick"]}' \
+                | sed -n 's/^\[{"Id":"\([0-9a-f]*\)".*/\1/p')
+          if [ -n "$$id" ] && curl -fsS --unix-socket "$$DOCKER_SOCK" -X POST "http://docker/containers/$$id/restart?t=5" >/dev/null; then
+            echo "link: the address stopped answering, so the tunnel was restarted"
+          else
+            echo "link: the address stopped answering, and the tunnel could not be restarted"
+          fi
+        }
         while true; do
           host=$$(curl -fsS -m 10 "$$QUICK_STATUS" 2>/dev/null | sed -n 's/.*"hostname": *"\([^"]*\)".*/\1/p')
           if [ -n "$$host" ] && [ "$$host" != "$$last" ]; then
@@ -142,9 +161,17 @@ services:
             if [ "$$code" = "200" ] || [ "$$code" = "201" ]; then
               echo "link: published $$url"
               last="$$host"
+              fails=0
             else
               why=$$(printf '%s' "$$res" | sed -n 's/.*"message": *"\([^"]*\)".*/\1/p' | head -n 1)
               echo "link: GitHub refused (HTTP $$code: $$why); token starts $$(printf '%s' "$$LINK_TOKEN" | cut -c1-15)…; trying again in a minute"
+            fi
+          elif [ -n "$$host" ]; then
+            if curl -fs -m 15 -o /dev/null "https://$$host/api/health"; then
+              fails=0
+            else
+              fails=$$((fails + 1))
+              [ "$$fails" -ge 4 ] && { restart_tunnel; fails=0; last=""; sleep 30; }
             fi
           fi
           sleep 60
